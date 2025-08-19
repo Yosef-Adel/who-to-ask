@@ -2,6 +2,20 @@
 
 This project provides a simple MCP server and client for ranking repository contributors.
 
+## Setup
+
+1. Install Python dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Install [Ollama](https://ollama.com/) and make sure an MCP-compatible model is available. This project uses `qwen3:4b`:
+
+```bash
+ollama pull qwen3:4b
+```
+
 ## Usage
 
 Start the MCP server in one terminal:
