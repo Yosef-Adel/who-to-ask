@@ -31,3 +31,12 @@ python who2ask_client.py --model qwen3:4b --server-cmd "python who_to_ask_server
 ```
 
 The client will connect to the server and allow you to ask questions that leverage repository history.
+
+## Snippet search
+
+The server also exposes a `find_file_by_snippet` tool that searches the
+repository for a given code snippet. Results are cached in memory using a hash
+of the snippet so repeated lookups are fast. For large repositories you can
+prebuild a [ripgrep-all](https://github.com/phiresky/ripgrep-all) index and
+call the tool with `use_index=True` and `index_path` pointing to the index
+directory to leverage the prebuilt search index.
