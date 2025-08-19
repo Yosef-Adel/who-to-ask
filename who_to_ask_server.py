@@ -1,7 +1,9 @@
 import collections
+import hashlib
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timedelta
@@ -13,6 +15,9 @@ mcp = FastMCP("who-to-ask")
 print(
     f"[WHO-TO-ASK MCP] Server starting (pid={os.getpid()})", file=sys.stderr, flush=True
 )
+
+# Cache for snippet search results keyed by hash
+_snippet_cache: Dict[str, List[str]] = {}
 
 # ----------------------
 # Helper functions
@@ -119,6 +124,39 @@ def find_importers(file_path: str, repo_path: str, timeout_s: int = 20) -> List[
 # ----------------------
 # Tools
 # ----------------------
+
+
+@mcp.tool()
+def find_file_by_snippet(
+    snippet: str,
+    repo_path: str = ".",
+    use_index: bool = False,
+    index_path: str | None = None,
+) -> List[str]:
+    """Return lines ``file:line:match`` where snippet appears.
+
+    Results are cached by a hash of the snippet. When ``use_index`` is True and
+    ``ripgrep-all`` is available, a prebuilt index can be leveraged for faster
+    searches. ``index_path`` should point to the directory containing the
+    prebuilt index (defaults to ``<repo>/.rga``).
+    """
+
+    snippet_hash = hashlib.sha256(snippet.encode("utf-8")).hexdigest()
+    if snippet_hash in _snippet_cache:
+        return _snippet_cache[snippet_hash]
+
+    repo_path = os.path.abspath(repo_path)
+
+    if use_index and shutil.which("rga"):
+        index = index_path or os.path.join(repo_path, ".rga")
+        cmd = ["rga", "--prebuilt", index, snippet, repo_path]
+    else:
+        cmd = ["rg", "-n", snippet, repo_path]
+
+    out = _run(cmd, timeout_s=20)
+    results = out.splitlines() if out else []
+    _snippet_cache[snippet_hash] = results
+    return results
 
 
 @mcp.tool()
