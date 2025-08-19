@@ -1,0 +1,4 @@
+mcp
+requests
+rich
+ollama
