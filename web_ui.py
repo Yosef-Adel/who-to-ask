@@ -37,33 +37,35 @@ def respond(user_input: str, history: List[Dict[str, str]]):
     """Handle a single user turn for the Gradio UI.
 
     The Chatbot's history is updated in two stages:
-      1. Immediately append and yield the user's message so it shows up right away.
-      2. Run the tool/LLM turn, append the assistant's reply (or error) and yield again.
+      1. Immediately append and yield the user's message and a placeholder assistant line.
+      2. Run the tool/LLM turn, replace the placeholder with the final assistant reply and yield again.
 
-    This prevents the temporary disappearance of the user's message while the
-    model + tools are processing, and also ensures a non-empty assistant reply.
+    This avoids temporary disappearance of the user's message and guarantees a visible reply.
     """
 
-    # Show the user message immediately in the chat window
+    # Show the user message immediately with a placeholder assistant reply
     history.append({"role": "user", "content": user_input})
-    yield history
+    history.append({"role": "assistant", "content": "…"})
+    yield history.copy()
 
     async def _ask():
-        msgs = build_messages(history)
+        # Exclude the placeholder from messages sent to the model
+        msgs = build_messages(history[:-1])
         final, _ = await run_turn_with_tools(
             MODEL, MCP, msgs, TOOLS, timeout_s=TIMEOUT
         )
         # Guarantee a visible reply even if the model returns nothing
         final = final.strip() if final and final.strip() else "(no response)"
-        history.append({"role": "assistant", "content": final})
-        return history
+        history[-1]["content"] = final
+        return history.copy()
 
     try:
         yield LOOP.run_until_complete(_ask())
     except Exception as e:
         logging.exception("Error during respond")
-        history.append({"role": "assistant", "content": f"Error: {e}"})
-        yield history
+        history[-1]["content"] = f"Error: {e}"
+        yield history.copy()
+
 
 async def init_mcp():
     global MCP, TOOLS
@@ -79,7 +81,10 @@ async def init_mcp():
 async def shutdown_mcp():
     global MCP
     if MCP is not None:
-        await MCP.__aexit__(None, None, None)
+        try:
+            await MCP.__aexit__(None, None, None)
+        except RuntimeError as e:
+            logging.warning("MCP shutdown error: %s", e)
         MCP = None
         logging.info("MCP shut down")
 
