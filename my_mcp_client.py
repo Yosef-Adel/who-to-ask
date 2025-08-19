@@ -3,6 +3,7 @@ import subprocess
 import sys
 
 import ollama
+import os
 
 
 def send_msg(proc, obj):
@@ -35,10 +36,9 @@ def read_msg(proc):
 
 
 # ---- Launch MCP server ----
-server_cmd = [
-    "/Users/yosefsaaid/dev/who-to-ask/.venv/bin/python",
-    "/Users/yosefsaaid/dev/who-to-ask/who_to_ask_server.py",
-]
+# Use the current interpreter and resolve the server path relative to this file
+server_path = os.path.join(os.path.dirname(__file__), "who_to_ask_server.py")
+server_cmd = [sys.executable, server_path]
 proc = subprocess.Popen(
     server_cmd,
     stdin=subprocess.PIPE,
