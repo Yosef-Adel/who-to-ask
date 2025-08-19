@@ -2,3 +2,5 @@ mcp
 requests
 rich
 ollama
+gradio
+pytest
