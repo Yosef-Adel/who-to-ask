@@ -32,6 +32,16 @@ python who2ask_client.py --model qwen3:4b --server-cmd "python who_to_ask_server
 
 The client will connect to the server and allow you to ask questions that leverage repository history.
 
+### Web UI
+
+For a simple browser-based interface, run:
+
+```bash
+python web_ui.py
+```
+
+By default this will launch both the MCP server and a Gradio chat window at `http://localhost:7860` where you can ask questions interactively.
+
 ## Snippet search
 
 The server also exposes a `find_file_by_snippet` tool that searches the
