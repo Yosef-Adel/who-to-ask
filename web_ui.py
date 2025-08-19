@@ -1,7 +1,7 @@
 import asyncio
 import os
 import shlex
-from typing import List, Tuple
+from typing import List, Dict
 
 import gradio as gr
 
@@ -17,12 +17,9 @@ SERVER_CMD = os.getenv("WHO2ASK_SERVER_CMD", "python who_to_ask_server.py")
 TIMEOUT = int(os.getenv("WHO2ASK_TIMEOUT", "120"))
 
 
-def build_messages(history: List[Tuple[str, str]], user_input: str):
+def build_messages(history: List[Dict[str, str]]):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for user, assistant in history:
-        messages.append({"role": "user", "content": user})
-        messages.append({"role": "assistant", "content": assistant})
-    messages.append({"role": "user", "content": user_input})
+    messages.extend(history)
     return messages
 
 
@@ -33,18 +30,24 @@ def respond(user_input, history):
         async with McpWrapper(command=cmd, args=args) as mcp:
             mcp_tools = await mcp.list_tools()
             tools = as_ollama_tools(mcp_tools)
-            msgs = build_messages(history, user_input)
+            history.append({"role": "user", "content": user_input})
+            msgs = build_messages(history)
             final, _ = await run_turn_with_tools(
                 MODEL, mcp, msgs, tools, timeout_s=TIMEOUT
             )
-            return final
+            history.append({"role": "assistant", "content": final})
+            return history
 
     return asyncio.run(_ask())
 
 
 def main():
-    chat = gr.ChatInterface(respond, title="Who To Ask")
-    chat.launch()
+    with gr.Blocks(title="Who To Ask") as demo:
+        chatbot = gr.Chatbot(type="messages")
+        msg = gr.Textbox()
+        msg.submit(respond, [msg, chatbot], chatbot)
+        msg.submit(lambda: "", None, msg)
+    demo.launch()
 
 
 if __name__ == "__main__":
