@@ -117,6 +117,45 @@ def find_importers(file_path: str, repo_path: str, timeout_s: int = 20) -> List[
 
 
 # ----------------------
+# Snippet search helper
+# ----------------------
+
+
+def find_file_by_snippet(
+    snippet: str, repo_path: str, timeout_s: int = 20
+) -> List[str]:
+    """Return file paths containing `snippet`, ranked by match count.
+
+    Args:
+        snippet: Text snippet to search for. Treated as a literal string.
+        repo_path: Directory to search within.
+    Raises:
+        ValueError: If no files contain the snippet.
+    """
+    repo_path = os.path.abspath(repo_path)
+    if not snippet or not snippet.strip():
+        raise ValueError("Snippet must be a non-empty string")
+
+    # Use ripgrep for fast searching. -n gives line numbers, -F treats the
+    # snippet literally, and -U allows matches across newlines.
+    out = _run(["rg", "-n", "-F", "-U", snippet, repo_path], timeout_s=timeout_s)
+
+    if not out:
+        raise ValueError(f"Snippet not found in repository {repo_path}")
+
+    counts = collections.Counter()
+    for line in out.splitlines():
+        file_path = line.split(":", 1)[0]
+        if os.path.isfile(file_path):
+            counts[file_path] += 1
+
+    if not counts:
+        raise ValueError(f"Snippet not found in repository {repo_path}")
+
+    return [fp for fp, _ in counts.most_common()]
+
+
+# ----------------------
 # Tools
 # ----------------------
 
