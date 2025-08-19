@@ -2,6 +2,7 @@
 import json
 import subprocess
 import sys
+import os
 
 
 def send_msg(proc, obj):
@@ -43,10 +44,10 @@ def main():
     repo_path = sys.argv[3]
     months = int(sys.argv[4]) if len(sys.argv) > 4 else 6
 
-    server_cmd = [
-        sys.executable,
-        "/Users/yosefsaaid/dev/who-to-ask/who_to_ask_server.py",
-    ]
+    # Launch the MCP server using a path relative to this file so the script
+    # works outside the original developer's environment.
+    server_path = os.path.join(os.path.dirname(__file__), "who_to_ask_server.py")
+    server_cmd = [sys.executable, server_path]
     proc = subprocess.Popen(
         server_cmd,
         stdin=subprocess.PIPE,
