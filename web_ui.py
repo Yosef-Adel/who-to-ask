@@ -34,26 +34,36 @@ def build_messages(history: List[Dict[str, str]]):
 
 
 def respond(user_input: str, history: List[Dict[str, str]]):
-    async def _ask():
-        # history already includes previous turns; append user turn for this request
-        history.append({"role": "user", "content": user_input})
+    """Handle a single user turn for the Gradio UI.
 
+    The Chatbot's history is updated in two stages:
+      1. Immediately append and yield the user's message so it shows up right away.
+      2. Run the tool/LLM turn, append the assistant's reply (or error) and yield again.
+
+    This prevents the temporary disappearance of the user's message while the
+    model + tools are processing, and also ensures a non-empty assistant reply.
+    """
+
+    # Show the user message immediately in the chat window
+    history.append({"role": "user", "content": user_input})
+    yield history
+
+    async def _ask():
         msgs = build_messages(history)
         final, _ = await run_turn_with_tools(
             MODEL, MCP, msgs, TOOLS, timeout_s=TIMEOUT
         )
-
-        # append assistant turn and return updated history for Chatbot(type="messages")
+        # Guarantee a visible reply even if the model returns nothing
+        final = final.strip() if final and final.strip() else "(no response)"
         history.append({"role": "assistant", "content": final})
         return history
 
     try:
-        return LOOP.run_until_complete(_ask())
+        yield LOOP.run_until_complete(_ask())
     except Exception as e:
         logging.exception("Error during respond")
         history.append({"role": "assistant", "content": f"Error: {e}"})
-        return history
-
+        yield history
 
 async def init_mcp():
     global MCP, TOOLS
