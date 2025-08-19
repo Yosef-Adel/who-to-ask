@@ -1,6 +1,7 @@
 import asyncio
 import os
 import shlex
+import logging
 from typing import List, Tuple
 
 import gradio as gr
@@ -38,8 +39,11 @@ def respond(user_input, history):
                 MODEL, mcp, msgs, tools, timeout_s=TIMEOUT
             )
             return final
-
-    return asyncio.run(_ask())
+    try:
+        return asyncio.run(_ask())
+    except Exception as e:
+        logging.exception("Error during respond")
+        return f"Error: {e}"
 
 
 def main():
