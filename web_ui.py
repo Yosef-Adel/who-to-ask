@@ -37,11 +37,10 @@ def respond(user_input: str, history: List[Dict[str, str]]):
     """Handle a single user turn for the Gradio UI.
 
     The Chatbot's history is updated in two stages:
-      1. Immediately append and yield the user's message so it shows up right away.
-      2. Run the tool/LLM turn, append the assistant's reply (or error) and yield again.
+      1. Immediately append and yield the user's message and a placeholder assistant line.
+      2. Run the tool/LLM turn, replace the placeholder with the final assistant reply and yield again.
 
-    This prevents the temporary disappearance of the user's message while the
-    model + tools are processing, and also ensures a non-empty assistant reply.
+    This avoids temporary disappearance of the user's message and guarantees a visible reply.
     """
 
     # Show the user message immediately with a placeholder assistant reply
@@ -66,6 +65,7 @@ def respond(user_input: str, history: List[Dict[str, str]]):
         logging.exception("Error during respond")
         history[-1]["content"] = f"Error: {e}"
         yield history.copy()
+
 
 async def init_mcp():
     global MCP, TOOLS
