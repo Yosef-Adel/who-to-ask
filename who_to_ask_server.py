@@ -4,6 +4,7 @@ import re
 import shlex
 import subprocess
 import sys
+import textwrap
 from datetime import datetime, timedelta
 from typing import Dict, List
 
@@ -26,6 +27,39 @@ def _run(cmd, timeout_s=60, text=True):
         return ""
     except subprocess.CalledProcessError:
         return ""
+
+
+def find_file_by_snippet(snippet: str, repo_path: str = ".") -> List[str]:
+    """Return files in ``repo_path`` that contain ``snippet``.
+
+    The snippet is normalized to improve matching:
+    - Line endings are converted to ``\n``
+    - Leading/trailing whitespace is stripped
+    - Common indentation is removed
+    - Consecutive blank lines are collapsed to a single blank line
+    """
+    repo_path = os.path.abspath(repo_path)
+
+    # Normalize snippet formatting
+    snippet = snippet.replace("\r\n", "\n").replace("\r", "\n")
+    snippet = textwrap.dedent(snippet).strip()
+    snippet = re.sub(r"\n{2,}", "\n\n", snippet)
+
+    matches = []
+    for root, _, files in os.walk(repo_path):
+        for name in files:
+            path = os.path.join(root, name)
+            try:
+                with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+            except Exception:
+                continue
+
+            content = content.replace("\r\n", "\n").replace("\r", "\n")
+            if snippet and snippet in content:
+                matches.append(os.path.relpath(path, repo_path))
+
+    return matches
 
 
 def git_blame_counts(
